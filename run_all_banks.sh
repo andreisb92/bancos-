@@ -61,6 +61,38 @@ npm run consolidateJsonl
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════════════════"
+echo "🔄 Ejecutando ETL (Extracción, Transformación y Carga)..."
+echo "════════════════════════════════════════════════════════════════════════════════"
+echo ""
+
+# Verificar que Python está instalado
+if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+    echo "⚠️  Python no está instalado. Saltando ETL..."
+else
+    # Usar python3 si está disponible, sino python
+    PYTHON_CMD="python3"
+    if ! command -v python3 &> /dev/null; then
+        PYTHON_CMD="python"
+    fi
+    
+    # Verificar que el archivo ETL existe
+    if [ -f "data/etl-bank-discounts.py" ]; then
+        echo "✅ Ejecutando ETL: data/etl-bank-discounts.py"
+        $PYTHON_CMD data/etl-bank-discounts.py
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ ETL completado exitosamente"
+        else
+            echo "⚠️  El ETL terminó con errores, pero el proceso continúa"
+        fi
+    else
+        echo "⚠️  No se encontró el archivo data/etl-bank-discounts.py"
+        echo "   Saltando ejecución del ETL..."
+    fi
+fi
+
+echo ""
+echo "════════════════════════════════════════════════════════════════════════════════"
 echo "✅ PROCESO COMPLETADO"
 echo "════════════════════════════════════════════════════════════════════════════════"
 echo ""
