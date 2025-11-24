@@ -18,7 +18,7 @@ console.log('══════════════════════�
 const crawler = new PlaywrightCrawler({
   launchContext: {
     launchOptions: {
-      headless: false,
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

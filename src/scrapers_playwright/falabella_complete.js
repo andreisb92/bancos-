@@ -21,7 +21,7 @@ async function scrapeFalabellaComplete() {
   
   try {
     browser = await playwright.chromium.launch({
-      headless: false,
+      headless: true,
       slowMo: 50,
       args: [
         '--disable-blink-features=AutomationControlled',
