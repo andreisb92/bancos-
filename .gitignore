@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Datos pesados - NO subir
+data/**/*.csv
+data/**/*.json
+data/**/*.jsonl
+data/**/*.xlsx
+data/**/*.xls
+data/**/*.py
+data/**/full/
+data/**/banco-*/
+data/**/santander/
+data/**/bci/
+
+# Mantener estructura de directorios pero sin datos
+!data/.gitkeep
+!data/jsonl/.gitkeep
+
+# Storage de Crawlee
+storage/
+screenshots/
+
+# Logs
+*.log
+*.log.*
+
+# Archivos temporales
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python (si hay scripts Python)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Archivos de sistema
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
