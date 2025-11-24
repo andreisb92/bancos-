@@ -11,10 +11,23 @@ npx playwright install
 
 ## 📋 Uso
 
-### Ejecutar todos los scrapers exitosos
+### Ejecutar todos los scrapers exitosos (Recomendado)
 
+**En Linux/Mac:**
+```bash
+chmod +x run_all_banks.sh
+./run_all_banks.sh
+```
+
+**En Windows (Git Bash o WSL):**
+```bash
+bash run_all_banks.sh
+```
+
+**O usando npm directamente:**
 ```bash
 npm run runAllWorking
+npm run consolidateJsonl
 ```
 
 Esto ejecutará los scrapers de:
