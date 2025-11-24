@@ -4,7 +4,48 @@ Sistema de scraping para extraer ofertas y descuentos de los principales bancos 
 
 ## 🚀 Instalación
 
+### Instalación rápida (Linux)
+
 ```bash
+# 1. Instalar Node.js, npm y dependencias del sistema
+sudo chmod +x install_dependencies.sh
+sudo ./install_dependencies.sh
+
+# 2. Instalar dependencias del proyecto
+cd CMR/crawlee
+npm install
+npx playwright install
+```
+
+### Instalación manual (Linux)
+
+Si prefieres instalar manualmente:
+
+```bash
+# Instalar Node.js desde NodeSource (recomendado)
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo bash -
+sudo apt-get install -y nodejs
+
+# Verificar instalación
+node --version
+npm --version
+
+# Instalar dependencias del proyecto
+cd CMR/crawlee
+npm install
+npx playwright install
+
+# Instalar Python y dependencias para ETL (opcional)
+sudo apt-get install -y python3 python3-pip
+pip3 install psycopg2-binary
+```
+
+### Instalación en Windows/Mac
+
+```bash
+# Instalar Node.js desde https://nodejs.org/
+# Luego:
+cd CMR/crawlee
 npm install
 npx playwright install
 ```
