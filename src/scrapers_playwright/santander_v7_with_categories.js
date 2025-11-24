@@ -42,154 +42,165 @@ const crawler = new PlaywrightCrawler({
       await page.waitForTimeout(5000);
       console.log('      ✓ Página cargada');
 
-      // Extraer categorías disponibles usando los checkboxes
+      // Extraer categorías disponibles usando los selectores reales de Chile
       console.log('   📊 Extrayendo categorías...');
       const availableCategories = await page.evaluate(() => {
         const categories = [];
         
-        // Buscar checkboxes de categorías
-        const categoryCheckboxes = document.querySelectorAll('fieldset input[type="checkbox"][id]');
-        categoryCheckboxes.forEach(checkbox => {
-          const id = checkbox.id;
-          const label = checkbox.closest('span')?.querySelector('label');
-          const text = label ? label.textContent.trim() : '';
-          if (text && id !== 'ALL') {
-            categories.push({
-              id: id,
-              name: text,
-              value: checkbox.value || text
-            });
-          }
-        });
+        // Buscar botones de categorías por el contenedor
+        const categoryContainer = document.querySelector('#cat-nav');
+        if (categoryContainer) {
+          const categoryItems = categoryContainer.querySelectorAll('.cat-nav-item');
+          categoryItems.forEach(item => {
+            const text = item.querySelector('p')?.textContent?.trim();
+            if (text) {
+              categories.push(text);
+            }
+          });
+        }
         
         return categories;
       });
 
-      console.log(`      ✅ Categorías encontradas: ${availableCategories.map(c => c.name).join(', ')}`);
+      console.log(`      ✅ Categorías encontradas: ${availableCategories.join(', ')}`);
 
-      // Procesar cada categoría con paginación
+      // Función para extraer ofertas de la página actual
+      const extractOffersFromPage = async (categoryName) => {
+        return await page.evaluate((cat) => {
+          const items = [];
+          const cards = document.querySelectorAll('.discount-cont.d-flex');
+          
+          for (const card of cards) {
+            try {
+              // Extraer título/comercio
+              const titleElem = card.querySelector('p.fw-bold.f-large');
+              const title = titleElem ? titleElem.textContent.trim() : '';
+
+              // Extraer descuento
+              const discountElem = card.querySelector('p.text-primary-mediumgrey.f-small.fw-normal.mb-12');
+              const discount = discountElem ? discountElem.textContent.trim() : '';
+
+              // Extraer imagen
+              let imageUrl = '';
+              const imgElem = card.querySelector('figure img');
+              if (imgElem) {
+                imageUrl = imgElem.src || imgElem.getAttribute('data-src') || '';
+              } else {
+                const figureElem = card.querySelector('figure');
+                if (figureElem) {
+                  const bgImage = window.getComputedStyle(figureElem).backgroundImage;
+                  const match = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                  if (match) imageUrl = match[1];
+                }
+              }
+
+              // Extraer términos
+              const terms = card.textContent.trim().substring(0, 300);
+
+              // Extraer enlace
+              let linkUrl = '';
+              const linkElem = card.querySelector('a[href], button[onclick]');
+              if (linkElem) {
+                linkUrl = linkElem.href || '';
+              }
+
+              if (title || discount) {
+                items.push({
+                  title: title || 'Beneficio Santander',
+                  merchant: title || 'Comercio',
+                  discount: discount || 'Descuento',
+                  terms: terms,
+                  imageUrl: imageUrl,
+                  linkUrl: linkUrl || window.location.href,
+                  url: window.location.href,
+                  category: cat,
+                  bankSlug: 'santander'
+                });
+              }
+            } catch (err) {
+              console.log(`[Extractor] Error procesando tarjeta:`, err.message);
+            }
+          }
+
+          return items;
+        }, categoryName);
+      };
+
+      // Función para obtener total de páginas desde la paginación
+      const getTotalPages = async () => {
+        return await page.evaluate(() => {
+          const pagination = document.querySelector('ul.pagination');
+          if (pagination) {
+            // Buscar el texto "de" seguido del número total
+            const deElement = pagination.querySelector('li p');
+            if (deElement && deElement.textContent.trim() === 'de') {
+              const nextSibling = deElement.parentElement.nextElementSibling;
+              if (nextSibling) {
+                const totalPageElem = nextSibling.querySelector('p');
+                if (totalPageElem) {
+                  const total = parseInt(totalPageElem.textContent.trim());
+                  return total || 1;
+                }
+              }
+            }
+          }
+          return 1;
+        });
+      };
+
+      // Procesar cada categoría con paginación completa
       for (let i = 0; i < availableCategories.length; i++) {
         const category = availableCategories[i];
-        console.log(`\n   📂 Procesando categoría ${i + 1}/${availableCategories.length}: ${category.name} (${category.id})`);
+        console.log(`\n   📂 Procesando categoría ${i + 1}/${availableCategories.length}: ${category}`);
         
         try {
-          // Hacer click en el checkbox de la categoría
-          const categoryCheckbox = await page.locator(`input[type="checkbox"][id="${category.id}"]`);
-          if (await categoryCheckbox.isVisible()) {
-            await categoryCheckbox.click();
+          // Buscar y hacer click en el botón de categoría
+          const categoryButton = await page.locator(`#cat-nav .cat-nav-item:has-text("${category}")`).first();
+          if (await categoryButton.isVisible()) {
+            await categoryButton.click();
             await page.waitForTimeout(3000);
             
-            // Detectar total de páginas para esta categoría
-            let totalPages = 1;
-            let currentPage = 1;
+            // Obtener total de páginas para esta categoría
+            const totalPages = await getTotalPages();
+            console.log(`      📄 Total de páginas para "${category}": ${totalPages}`);
+            
             const categoryOffers = [];
             
-            // Función para extraer ofertas de la página actual
-            const extractOffersFromPage = async () => {
-              return await page.evaluate((cat) => {
-                const items = [];
-                // Buscar todas las tarjetas de ofertas (ajustar selectores según la estructura real)
-                const cards = document.querySelectorAll('.discount-cont.d-flex, [class*="card"], [class*="benefit"], article');
-                
-                for (const card of cards) {
-                  try {
-                    // Extraer título/comercio
-                    const titleElem = card.querySelector('p.fw-bold.f-large, h2, h3, [class*="title"]');
-                    const title = titleElem ? titleElem.textContent.trim() : '';
-
-                    // Extraer descuento
-                    const discountElem = card.querySelector('p.text-primary-mediumgrey.f-small.fw-normal.mb-12, [class*="discount"], [class*="descuento"]');
-                    const discount = discountElem ? discountElem.textContent.trim() : '';
-
-                    // Extraer imagen
-                    let imageUrl = '';
-                    const imgElem = card.querySelector('img');
-                    if (imgElem) {
-                      imageUrl = imgElem.src || imgElem.getAttribute('data-src') || '';
-                    }
-
-                    // Extraer términos
-                    const terms = card.textContent.trim().substring(0, 300);
-
-                    // Extraer enlace
-                    let linkUrl = '';
-                    const linkElem = card.querySelector('a[href]');
-                    if (linkElem) {
-                      linkUrl = linkElem.href || '';
-                    }
-
-                    if (title || discount) {
-                      items.push({
-                        title: title || 'Beneficio Santander',
-                        merchant: title || 'Comercio',
-                        discount: discount || 'Descuento',
-                        terms: terms,
-                        imageUrl: imageUrl,
-                        linkUrl: linkUrl || window.location.href,
-                        url: window.location.href,
-                        category: cat.name,
-                        bankSlug: 'santander'
-                      });
-                    }
-                  } catch (err) {
-                    console.log(`[Extractor] Error procesando tarjeta:`, err.message);
+            // Extraer todas las páginas
+            for (let currentPage = 1; currentPage <= totalPages; currentPage++) {
+              console.log(`      📄 Extrayendo página ${currentPage}/${totalPages}...`);
+              
+              // Extraer ofertas de la página actual
+              const pageOffers = await extractOffersFromPage(category);
+              categoryOffers.push(...pageOffers);
+              console.log(`         ✅ ${pageOffers.length} ofertas extraídas`);
+              
+              // Si no es la última página, hacer click en siguiente
+              if (currentPage < totalPages) {
+                try {
+                  const nextButton = page.locator('ul.pagination button.page-link:has(span.str-chevron-right)');
+                  if (await nextButton.isVisible()) {
+                    await nextButton.click();
+                    await page.waitForTimeout(3000); // Esperar a que cargue la nueva página
+                  } else {
+                    console.log(`         ⚠️  Botón siguiente no encontrado en página ${currentPage}`);
+                    break;
                   }
-                }
-
-                return items;
-              }, category);
-            };
-            
-            // Extraer primera página
-            let pageOffers = await extractOffersFromPage();
-            categoryOffers.push(...pageOffers);
-            console.log(`      📄 Página ${currentPage}: ${pageOffers.length} ofertas`);
-            
-            // Intentar navegar a páginas siguientes usando la URL con parámetros
-            while (true) {
-              currentPage++;
-              
-              // Construir URL con paginación
-              const baseUrl = page.url().split('#')[0];
-              const categoryCodes = category.id === 'ALL' ? '' : category.id;
-              const paginatedUrl = `${baseUrl}#/results?category-code=${encodeURIComponent(categoryCodes)}&page=${currentPage}`;
-              
-              try {
-                await page.goto(paginatedUrl, {
-                  waitUntil: 'domcontentloaded',
-                  timeout: 60000
-                });
-                await page.waitForTimeout(3000);
-                
-                pageOffers = await extractOffersFromPage();
-                
-                if (pageOffers.length === 0) {
-                  console.log(`      📄 Página ${currentPage}: Sin ofertas, fin de paginación`);
+                } catch (err) {
+                  console.log(`         ⚠️  Error navegando a página ${currentPage + 1}: ${err.message}`);
                   break;
                 }
-                
-                categoryOffers.push(...pageOffers);
-                console.log(`      📄 Página ${currentPage}: ${pageOffers.length} ofertas`);
-                
-                // Limitar a máximo 50 páginas por seguridad
-                if (currentPage >= 50) {
-                  console.log(`      ⚠️  Límite de 50 páginas alcanzado`);
-                  break;
-                }
-              } catch (err) {
-                console.log(`      ⚠️  Error navegando a página ${currentPage}: ${err.message}`);
-                break;
               }
             }
             
-            console.log(`      ✅ Total extraídas de "${category.name}": ${categoryOffers.length} ofertas`);
+            console.log(`      ✅ Total extraídas de "${category}": ${categoryOffers.length} ofertas`);
             allOffers.push(...categoryOffers);
           } else {
-            console.log(`      ⚠️  Categoría "${category.name}" no encontrada`);
+            console.log(`      ⚠️  Categoría "${category}" no encontrada`);
           }
           
         } catch (err) {
-          console.log(`      ❌ Error procesando categoría "${category.name}": ${err.message}`);
+          console.log(`      ❌ Error procesando categoría "${category}": ${err.message}`);
         }
       }
 
