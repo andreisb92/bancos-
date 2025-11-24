@@ -26,8 +26,8 @@ const crawler = new PlaywrightCrawler({
       ],
     },
   },
-  requestHandlerTimeoutSecs: 300,
-  maxRequestRetries: 2,
+  requestHandlerTimeoutSecs: 600,
+  maxRequestRetries: 3,
   
   async requestHandler({ page, log }) {
     const allOffers = [];
@@ -35,8 +35,8 @@ const crawler = new PlaywrightCrawler({
     try {
       console.log('   📄 Cargando página inicial...');
       await page.goto(BANCO_CHILE_URL, { 
-        waitUntil: 'networkidle',
-        timeout: 60000 
+        waitUntil: 'domcontentloaded',
+        timeout: 120000 
       });
       
       await page.waitForTimeout(5000);

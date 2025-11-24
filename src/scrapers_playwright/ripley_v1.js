@@ -35,7 +35,7 @@ const crawler = new PlaywrightCrawler({
       console.log('   📄 Cargando página inicial...');
       await page.goto(RIPLEY_URL, { 
         waitUntil: 'networkidle',
-        timeout: 60000 
+        timeout: 120000 
       });
       
       await page.waitForTimeout(5000);
