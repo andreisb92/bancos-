@@ -77,13 +77,19 @@ else
     
     # Verificar que el archivo ETL existe
     if [ -f "data/etl-bank-discounts.py" ]; then
-        echo "✅ Ejecutando ETL: data/etl-bank-discounts.py"
-        $PYTHON_CMD data/etl-bank-discounts.py
-        
-        if [ $? -eq 0 ]; then
-            echo "✅ ETL completado exitosamente"
+        # Verificar que existe el archivo consolidado
+        if [ -f "data/descuentos_all.jsonl" ]; then
+            echo "✅ Ejecutando ETL con archivo consolidado: data/descuentos_all.jsonl"
+            $PYTHON_CMD data/etl-bank-discounts.py data/descuentos_all.jsonl
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ ETL completado exitosamente"
+            else
+                echo "⚠️  El ETL terminó con errores, pero el proceso continúa"
+            fi
         else
-            echo "⚠️  El ETL terminó con errores, pero el proceso continúa"
+            echo "⚠️  No se encontró el archivo data/descuentos_all.jsonl"
+            echo "   El ETL necesita el archivo consolidado para ejecutarse"
         fi
     else
         echo "⚠️  No se encontró el archivo data/etl-bank-discounts.py"
